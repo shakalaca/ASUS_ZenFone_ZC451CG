@@ -1,0 +1,6 @@
+ifeq ("$(FACTORY)","1")
+CFLAGS_akm09911.o += -D CONFIG_ASUS_FACTORY_SENSOR_MODE
+endif
+obj-$(CONFIG_SENSORS_AK09911)   += akm09911.o
+
+

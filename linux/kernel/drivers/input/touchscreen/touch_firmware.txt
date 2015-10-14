@@ -1,0 +1,5 @@
+Pre Sr Himax : D0505
+Sr Himax : D0503
+goodix_firmware : 1050
+goodix_config:0x4b(shipping);0(factory)
+focaltech:42
