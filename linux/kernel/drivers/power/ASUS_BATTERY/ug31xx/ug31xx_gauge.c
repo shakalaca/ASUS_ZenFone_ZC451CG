@@ -413,7 +413,7 @@ static void get_ggb_array(void)
 	else if(1150*1023/1500 <= vol_temp && vol_temp <= 1300*1023/1500)
 	{
 		GAUGE_info("this is new battery\n");
-		unknown_battery = 1;//can't changer for new battery
+		//unknown_battery = 1;//can't changer for new battery
 		FactoryGGBXFile = FactoryGGBXFile_ZC451_2ND;
 	}
 	else

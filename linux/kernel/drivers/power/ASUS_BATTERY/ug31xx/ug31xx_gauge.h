@@ -120,6 +120,7 @@ struct ug31xx_module_interface {
 	unsigned char (*get_decimate_rst_sts)(void);
   int (*get_delta_time)(void);
   void (*get_cc_chg_offset)(unsigned int *offset_25, unsigned int *offset_50, unsigned int *offset_75, unsigned int *offset_100);
+  int (*get_suspend_time)(void);
 
 	int (*set_backup_file)(char enable);
 	int (*set_charger_full)(char is_full);
@@ -143,6 +144,7 @@ struct ug31xx_module_interface {
 	int (*set_ggb_board_gain)(int gain);
 	int (*set_ggb_config)(unsigned int config);
   int (*set_cc_chg_offset)(unsigned int offset_25, unsigned int offset_50, unsigned int offset_75, unsigned int offset_100);
+  int (*set_capacity_force)(int rsoc);
 
 	int (*chk_backup_file)(void);
 	int (*enable_save_data)(char enable);

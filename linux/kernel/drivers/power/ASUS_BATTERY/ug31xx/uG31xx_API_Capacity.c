@@ -11,7 +11,7 @@
  *  Capacity algorithm
  *
  * @author  AllenTeng <allen_teng@upi-semi.com>
- * @revision  $Revision: 110 $
+ * @revision  $Revision: 112 $
  */
 
 #include "stdafx.h"     //windows need this??
@@ -19,7 +19,7 @@
 
 #ifdef  uG31xx_OS_ANDROID
 
-  #define CAPACITY_VERSION      ("Capacity $Rev: 110 $")
+  #define CAPACITY_VERSION      ("Capacity $Rev: 112 $")
   //#define CAP_LOG_UPDATE_TABLE                              ///< [AT-PM] : Log updated table to a file ; 03/25/2013
 
   #ifdef  CAP_LOG_UPDATE_TABLE
@@ -32,11 +32,11 @@
 
   #if defined(BUILD_UG31XX_LIB)
 
-    #define CAPACITY_VERSION      ("Capacity $Rev: 110 $")
+    #define CAPACITY_VERSION      ("Capacity $Rev: 112 $")
     
   #else   ///< else of defined(BUILD_UG31XX_LIB)
   
-    #define CAPACITY_VERSION      (_T("Capacity $Rev: 110 $"))
+    #define CAPACITY_VERSION      (_T("Capacity $Rev: 112 $"))
     
   #endif  ///< end of defined(BUILD_UG31XX_LIB)
   
@@ -127,7 +127,8 @@ typedef void (*VerFuncArguObjS16RtnNull)(CapacityInternalDataType *obj, _cap_s16
 
 #endif  ///< end of MEAS_STATUS_REFER_ET
 
-#define LIMIT_FCC_WITH_ILMD_RANGE     (20)
+#define LIMIT_FCC_WITH_ILMD_RANGE       (20)
+#define LIMIT_FCC_WITH_ILMD_UPPER_RATIO (10)
 
 /**
  * @brief LimitValue
@@ -163,6 +164,8 @@ _cap_s32_ LimitValue(_cap_s32_ input, _cap_s32_ reference, _cap_u8_ percent)
   }
 
   /// [AT-PM] : Check upper bound ; 04/02/2014
+  percent = percent/LIMIT_FCC_WITH_ILMD_UPPER_RATIO;
+  percent = (percent == 0) ? 1 : percent;
   reference = reference + reference*percent/CONST_PERCENTAGE;
   if(input <= reference)
   {
@@ -2954,7 +2957,7 @@ _cap_u8_ UpiGetOcvSoc(CapacityDataType *data, _cap_u16_ volt)
   FindOcvRM(obj, OCV_TABLE_IDX_STAND_ALONE, volt);
   soc = (_cap_u8_)CalculateRsoc((_cap_u32_)obj->rm, obj->info->fcc);
   #ifdef  UG31XX_SHELL_ALGORITHM
-  upi_free(obj);
+    upi_free(obj);
   #endif  ///< end of UG31XX_SHELL_ALGORITHM
   return (soc);
 }

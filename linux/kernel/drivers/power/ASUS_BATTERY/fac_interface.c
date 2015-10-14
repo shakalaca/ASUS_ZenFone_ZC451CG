@@ -252,6 +252,30 @@ struct file_operations unknown_battery_fops = {
 	.read=unknown_battery_read,
 };
 
+ssize_t enabled_FM_read (struct file *filp, char __user *userbuf, size_t size, loff_t *loff_p)
+{
+	unsigned char len;
+	int val;
+	char kernelbuf[5];
+	if(gpio_request(53, "fm") == 0)
+	{
+		if(gpio_get_value(53) == 0)
+			val = 0;
+		else
+			val = 1;
+		len = sprintf(kernelbuf,"%d\n",val);
+		gpio_free(53);
+	}
+	else
+	{
+		len = sprintf(kernelbuf,"request gpio err\n");
+	}
+	return simple_read_from_buffer(userbuf, size,loff_p,kernelbuf,len);
+}
+struct file_operations enabled_FM_fops = {
+	.read=enabled_FM_read,
+};
+
 static int __init fac_interface_init(void)
 {
 	printk(KERN_ERR"[jevian log]this is fac img\n");
@@ -298,6 +322,10 @@ static int __init fac_interface_init(void)
 	if(proc_create("zc451cg_unknown_battery", 0777, NULL, &unknown_battery_fops)==NULL)
 	{
 		printk(KERN_ERR"create zc451cg_unknown_battery inode is error\n");
+	}
+	if(proc_create("zc451cg_enabled_FM", 0777, NULL, &enabled_FM_fops)==NULL)
+	{
+		printk(KERN_ERR"create zc451cg_enabled_FM inode is error\n");
 	}
 	return 0;
 }

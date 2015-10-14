@@ -4,7 +4,7 @@
  *  Header of uG31xx capacity algorithm
  *
  * @author  AllenTeng <allen_teng@upi-semi.com>
- * @revision  $Revision: 108 $
+ * @revision  $Revision: 648 $
  */
 
 typedef char            _cap_bool_;
