@@ -84,6 +84,7 @@ struct otg_hsm {
 	int b_bus_req;
 	int a_suspend_req;
 	int b_bus_suspend_vld;
+	int a_vbus_overcurrent;
 
 	/* Output */
 	int drv_vbus;

@@ -35,7 +35,7 @@ int factory_test=1;
 short databuf_short[625];
 
 static unsigned char CTPM_FW[] = {
-#include "ASUS_ZC451CG_V92_D2_20141219_app.cfg"
+#include "ASUS_ZC451CG_5346_0x53_0xA3_20150113_app.cfg"
 };
 
 //zax 20141116 ++++++++++++++

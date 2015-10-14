@@ -321,11 +321,15 @@ int  Ft_Printf_Touchdata(struct ftxxxx_ts_data *data, u8* readbuf)
 static int ftxxxx_read_Touchdata(struct ftxxxx_ts_data *data)
 {
 	struct ts_event *event = &data->event;
-	u8 buf[POINT_READ_BUF] = { 0 };
+	u8 buf[POINT_READ_BUF] = { 0xFF };
+//	u8 buf[POINT_READ_BUF] = { 0 };
 	int ret = -1;
 	int i = 0;
 	u8 pointid = FT_MAX_ID;
 
+	u8  pointweight=0xff; // add 2015 0105 
+	u8  pointarea=0xff; // add 2015 0106 
+	buf[0] = 0x00;
 	ret = ftxxxx_i2c_Read(data->client, buf, 1, buf, POINT_READ_BUF);
 	if (ret < 0) {
 		dev_err(&data->client->dev, "%s read touchdata failed.\n",
@@ -352,8 +356,13 @@ static int ftxxxx_read_Touchdata(struct ftxxxx_ts_data *data)
 			8 | (((s16) buf[FT_TOUCH_Y_L_POS + FT_TOUCH_STEP * i]) & 0xFF);
 		event->au8_touch_event[i] =
 			buf[FT_TOUCH_EVENT_POS + FT_TOUCH_STEP * i] >> 6;
+		pointweight= buf[7 + FT_TOUCH_STEP * i] ; 
+        pointarea =(buf[8 + FT_TOUCH_STEP * i]) >> 4;
+       // (event=0 || 2)&(總點數=0 || (weight=0&area=0)) 
 		if((event->au8_touch_event[i]==0 || event->au8_touch_event[i]==2)&&(event->Cur_touchpoint==0))//20141205
 				return 1;//20141205
+		if((event->au8_touch_event[i]==0 || event->au8_touch_event[i]==2)&&(pointweight==0)&&(pointarea==0))
+	     	    return 1; //20150106
 		event->au8_finger_id[i] =
 			(buf[FT_TOUCH_ID_POS + FT_TOUCH_STEP * i]) >> 4;
 #if 0

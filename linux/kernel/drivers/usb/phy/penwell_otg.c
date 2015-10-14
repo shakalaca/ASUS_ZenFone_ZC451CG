@@ -2492,6 +2492,7 @@ static void init_hsm(void)
 	iotg->hsm.b_bus_req = 0;
 	/* no system error */
 	iotg->hsm.a_clr_err = 0;
+	iotg->hsm.a_vbus_overcurrent = 0;
 
 	if (iotg->otg.state == OTG_STATE_A_IDLE) {
 		wake_lock(&pnw->wake_lock);
@@ -3887,6 +3888,7 @@ static void penwell_otg_work(struct work_struct *work)
 
 			if (!hsm->a_vbus_vld) {
 				dev_warn(pnw->dev, "vbus can't rise to vbus vld, overcurrent!\n");
+				hsm->a_vbus_overcurrent = 1;
 				/* Turn off VBUS */
 				otg_set_vbus(iotg->otg.otg, false);
 
@@ -4374,7 +4376,12 @@ static void penwell_otg_work(struct work_struct *work)
 
 			/* Move to A_IDLE state, vbus falls */
 			/* Always set a_bus_req to 1, in case no ADP */
-			hsm->a_bus_req = 1;
+			if (hsm->a_vbus_overcurrent){
+				dev_dbg(pnw->dev,"OTG_STATE_A_WAIT_VFALL: a_vbus_overcurrent\n");
+				hsm->a_vbus_overcurrent = 0;
+				hsm->a_bus_req = 0;
+			}else
+				hsm->a_bus_req = 1;
 
 			iotg->otg.state = OTG_STATE_A_IDLE;
 			penwell_update_transceiver();
