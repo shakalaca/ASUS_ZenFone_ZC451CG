@@ -2157,9 +2157,9 @@ static int rt5647_lout_event(struct snd_soc_dapm_widget *w,
 			printk("stream type = %d,recording type = %d\n",stream_usecase,is_recording);
 			snd_soc_write(codec, 0xb5, 0x1FA0);
 			snd_soc_write(codec, 0xb6, 0x001F);
-			snd_soc_write(codec, 0xb7, 0x500C);
+			snd_soc_write(codec, 0xb7, 0x5004);
 			snd_soc_write(codec, 0xf0, 0x001F);
-			snd_soc_write(codec, 0xb4, 0x42AC);
+			snd_soc_write(codec, 0xb4, 0x02AC);
 		}
 
 		schedule_delayed_work(&lout_work,msecs_to_jiffies(0));
@@ -3930,11 +3930,17 @@ void do_spk_work(struct work_struct *work)  //Jericho 0213
 void do_lout_work(struct work_struct *work)
 {
 	msleep(5);
+	printk("%s:stream_usecase = %d\n",__func__,stream_usecase);
 	snd_soc_update_bits(codec_global, RT5647_LOUT1,
 			    RT5647_L_MUTE | RT5647_R_MUTE, 0);
-	msleep(70);
+	if(stream_usecase == 1) {
+	    printk("%s:ringtone delay 95ms\n",__func__);
+	    msleep(95);
+	} else {
+	    printk("%s:not ringtone delay 20ms\n",__func__);
+	    msleep(20);
+	}
 	snd_soc_update_bits(codec_global,RT5647_GPIO_CTRL4,0x0002,0x0002);
-	printk("%s:[test_DRC_70]",__func__);
 }
 
 void do_disable_drc_work(struct work_struct *work)
