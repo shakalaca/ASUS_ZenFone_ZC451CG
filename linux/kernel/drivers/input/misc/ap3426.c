@@ -321,6 +321,27 @@ static int ap3426_set_plthres(struct i2c_client *client, int val)
     return err;
 }
 
+//<asus-annacheng20150331><<for crosstalk
+static int ap3426_set_crosstalk(struct i2c_client *client, int val)
+{
+    int lsb, msb, err;
+
+    msb = val >> 8;
+    lsb = val & AP3426_REG_PS_CAL_L_MASK;
+//	printk("%s:ASUS_PSENSOR SETCALI_DATA : msb :  %d ,lsb:  %d \n", 
+//			__func__, msb,lsb);
+    err = __ap3426_write_reg(client, AP3426_REG_PS_CAL_L,
+	    AP3426_REG_PS_CAL_L_MASK, AP3426_REG_PS_CAL_L_SHIFT, lsb);
+    if (err)
+	return err;
+
+    err = __ap3426_write_reg(client, AP3426_REG_PS_CAL_H,
+	    AP3426_REG_PS_CAL_H_MASK, AP3426_REG_PS_CAL_H_SHIFT, msb);
+
+    return err;
+}
+//<asus-annacheng20150331><<for crosstalk
+
 /* PX high threshold */
 static int ap3426_get_phthres(struct i2c_client *client)
 {
@@ -869,9 +890,22 @@ static long psensor_ioctl(struct file *file, unsigned int cmd, unsigned long arg
 			rc = -EFAULT;
 			goto pend;
 		}	
-
 		printk("%s:ASUS_PSENSOR SETCALI_DATA : pSensor_CALIDATA[0] :  %d ,pSensor_CALIDATA[1]:  %d \n", 
 			__func__, pSensor_CALIDATA[0],pSensor_CALIDATA[1]);
+		
+		//<asus-annacheng20150331>>>for crosstalk
+		if( (pSensor_CALIDATA[1] == 0) && ( pSensor_CALIDATA[0] >= 0  && pSensor_CALIDATA[0] < 512 ) ) {
+
+			ap3426_set_plthres(private_pl_data -> client,246);  //5m    //<asus-annach20150331>
+			ap3426_set_phthres(private_pl_data -> client,622);//3             
+			if (ap3426_set_crosstalk(private_pl_data -> client, pSensor_CALIDATA[0])) {
+				rc = -EFAULT;
+				pr_err("[PS][AP3426 error]%s: ap3426_set_plthres error\n", __func__);
+				goto pend;
+			}
+			goto pend;
+		}
+		//<asus-annacheng20150331><<for crosstalk	
 
 		if(pSensor_CALIDATA[0] <= 0||pSensor_CALIDATA[1] <= 0 
 			||pSensor_CALIDATA[0] <= pSensor_CALIDATA[1] ) {
@@ -900,6 +934,11 @@ static long psensor_ioctl(struct file *file, unsigned int cmd, unsigned long arg
 			goto pend;
 		}	
 		EnPSensorConfig_flag =  enPcalibration_flag ;
+		//anna<< for repeat k crosstlak
+		if(EnPSensorConfig_flag == 0){	
+			ap3426_set_crosstalk(private_pl_data -> client,EnPSensorConfig_flag )	;		
+		}
+		//anna>>
 		printk("%s: ASUS_PSENSOR_EN_CALIBRATION : EnPSensorConfig_flag is : %d  \n",__func__,EnPSensorConfig_flag); 
 		break;		
 	//<----------- ASUS-Bevis_Chen - ------------->
@@ -1423,8 +1462,9 @@ static int ap3426_init_client(struct i2c_client *client)
     ap3426_set_range(client, AP3426_ALS_RANGE_1);
     ap3426_set_mode(client, AP3426_SYS_DEV_DOWN);
 
-	ap3426_set_plthres(client,276);
-	ap3426_set_phthres(client,627);
+	ap3426_set_plthres(client,276);  //5m    //<asus-annach20150331>
+	ap3426_set_phthres(client,627);//3             
+
 
 	__ap3426_write_reg(client, AP3426_REG_PS_INTEGR,
 	    0, 0, 0x0f);

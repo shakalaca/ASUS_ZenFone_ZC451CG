@@ -2157,7 +2157,7 @@ static int rt5647_lout_event(struct snd_soc_dapm_widget *w,
 			printk("stream type = %d,recording type = %d\n",stream_usecase,is_recording);
 			snd_soc_write(codec, 0xb5, 0x1FA0);
 			snd_soc_write(codec, 0xb6, 0x001F);
-			snd_soc_write(codec, 0xb7, 0x5018);
+			snd_soc_write(codec, 0xb7, 0x500C);
 			snd_soc_write(codec, 0xf0, 0x001F);
 			snd_soc_write(codec, 0xb4, 0x42AC);
 		}

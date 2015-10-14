@@ -130,9 +130,14 @@
 #define AP3426_REG_PS_SMARTINT     0x24 /* PS Smart INT for low power */
 #define AP3426_REG_PS_INTEGR       0x25
 #define AP3426_REG_PS_PERSIS       0x26
+//<asus-annacheng20150331><<for crosstalk
 #define AP3426_REG_PS_CAL_L        0x28
+#define AP3426_REG_PS_CAL_L_SHIFT	(0)
+#define AP3426_REG_PS_CAL_L_MASK		0xFF
 #define AP3426_REG_PS_CAL_H        0x29
-
+#define AP3426_REG_PS_CAL_H_SHIFT	(0)
+#define AP3426_REG_PS_CAL_H_MASK		0x01
+//<asus-annacheng20150331><<for crosstalk
 #define AP3426_REG_PS_THDL_L       0x2A
 #define AP3426_REG_PS_THDL_L_SHIFT	(0)
 #define AP3426_REG_PS_THDL_L_MASK		0xFF
