@@ -111,14 +111,19 @@ int create_asusproc_lpsensor_status_entry( void )
 
 int static calibration_light(int x_big, int x_small, int report_lux){        
 
-                    int y_1000 = 1000;
-                    int y_200 = 200;
-                    int constant_k = (y_1000 - y_200)*x_small - (x_big - x_small)*y_200; 
+                    int y_big = 1000;
+                    int y_small = 200;
+                    int constant_k;
 
-					    if ( report_lux*(y_1000 - y_200) < constant_k){
+					    if (x_small == 1) {
+					        x_small = 0;
+					        y_small = 0;
+					    }
+					    constant_k = (y_big - y_small)*x_small - (x_big - x_small)*y_small;
+					    if ( report_lux*(y_big - y_small) < constant_k){
                               return 0; 
                         }else {   
-                             return ((report_lux*(y_1000 - y_200) - constant_k) / (x_big - x_small));			
+                             return ((report_lux*(y_big - y_small) - constant_k) / (x_big - x_small));			
                         }
 }
 
@@ -711,25 +716,23 @@ static void light_sensor_initial_value_work_routine(struct work_struct *work){
 					if(LSensor_CALIDATA[0] > 0&&LSensor_CALIDATA[1] > 0 
 					&&LSensor_CALIDATA[1] >LSensor_CALIDATA[0] ){ //in case of zero divisor error
 
-					D("CM36283---Before 1st calibration, report_lux is %d\n", report_lux);
-                    report_lux = calibration_light(LSensor_CALIDATA[1], LSensor_CALIDATA[0], report_lux);
-                    D("CM36283---After 1st calibration, report_lux is %d\n", report_lux);
-					report_lux = report_lux/sensitivity_x;
-			        D("CM36283---After 1st devided by 20, report_lux is %d\n", report_lux);	
+					D("CM36283---Before calibration, report_lux is %d\n", report_lux);
+                    report_lux = calibration_light(LSensor_CALIDATA[1], LSensor_CALIDATA[0], report_lux/sensitivity_x);
+                    D("CM36283---After calibration, report_lux is %d\n", report_lux);
 					}else{
        					printk("%s:ASUS input LSensor_CALIDATA was invalid .error !!!!!\n",__func__);
 				    }
 
 			}else{	
 #ifndef CONFIG_ASUS_FACTORY_SENSOR_MODE // in user build and no calibration data			   
-                   report_lux = report_lux*15;
+//				   report_lux = report_lux*15;
 				   D("CM36283--- NO calibration data, use default config\n"); 
 #else
-	               D("CM36283--- NO calibration data, Factory branch , NO default config\n"); 				  
+				   D("CM36283--- NO calibration data, Factory branch , NO default config\n"); 				 
 #endif // end of CONFIG_ASUS_FACTORY_SENSOR_MODE
+                   report_lux = report_lux*200/(15*sensitivity_x);
 
-                   report_lux = report_lux/sensitivity_x;
-			       D("CM36283---After devided by 20, report_lux is %d\n", report_lux);	
+			       D("CM36283---After calibration, report_lux is %d\n", report_lux);	
 
 		//<-- ASUS-Bevis_Chen - -->
 
@@ -810,8 +813,8 @@ static void psensor_initial_cmd(struct CM36283_info *lpi)
 			lpi->ps_conf1_val = 0x03d7;
 			lpi->ps_conf3_val = 0x0210;
 			
-			_CM36283_I2C_Write_Word(lpi->slave_addr, PS_THDL, 130);
-			_CM36283_I2C_Write_Word(lpi->slave_addr, PS_THDH, 160);
+			_CM36283_I2C_Write_Word(lpi->slave_addr, PS_THDL, 9);
+			_CM36283_I2C_Write_Word(lpi->slave_addr, PS_THDH, 21);
 		}
 		else
 		{
@@ -1179,10 +1182,8 @@ static long lightsensor_ioctl(struct file *file, unsigned int cmd,unsigned long 
   	                     &&LSensor_CALIDATA[1] >LSensor_CALIDATA[0] ){ //in case of zero divisor error
                             
                               D("CM36283---Before calibration, ASUS_LIGHTSENSOR_IOCTL_GETDATA,  report_lux is %d\n", report_lux);
-                              report_lux = calibration_light(LSensor_CALIDATA[1], LSensor_CALIDATA[0], report_lux);
-                              D("CM36283---After calibration, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);
-                              report_lux = report_lux/sensitivity_x;
-                              D("CM36283---After devided by 20, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);	
+                              report_lux = calibration_light(LSensor_CALIDATA[1], LSensor_CALIDATA[0], report_lux/sensitivity_x);
+                              D("CM36283---After calibration, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);	
 
                       }else{
 					        rc = -EINVAL;
@@ -1190,13 +1191,13 @@ static long lightsensor_ioctl(struct file *file, unsigned int cmd,unsigned long 
 					       }
               }else{
 #ifndef CONFIG_ASUS_FACTORY_SENSOR_MODE // in user build and no calibration data			   
-                     report_lux = report_lux*15;
+                     report_lux = report_lux*13;
 				     D("CM36283--- NO calibration data, use default config\n"); 
 #else
 	                 D("CM36283--- NO calibration data, Factory branch , NO default config\n"); 	
 #endif // end of CONFIG_ASUS_FACTORY_SENSOR_MODE				
 				     report_lux = report_lux/sensitivity_x;
-                     D("CM36283---After devided by 20, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);	
+                     D("CM36283---After calibration, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);	
                    }
 
                 if ( copy_to_user(argp, &report_lux, sizeof(report_lux) ) ) {
@@ -2495,22 +2496,20 @@ static int control_and_report( struct CM36283_info *lpi, uint8_t mode, uint16_t 
                        &&LSensor_CALIDATA[1] >LSensor_CALIDATA[0] ){ //in case of zero divisor error
 
                           D("CM36283---Before calibration, report_lux is %d\n", report_lux);
-                          report_lux = calibration_light(LSensor_CALIDATA[1], LSensor_CALIDATA[0], report_lux);
+                          report_lux = calibration_light(LSensor_CALIDATA[1], LSensor_CALIDATA[0], report_lux/sensitivity_x);
                           D("CM36283---After calibration, report_lux is %d\n", report_lux);
-                          report_lux = report_lux/sensitivity_x;
-			              D("CM36283---After devided by 20, report_lux is %d\n", report_lux);
                 	}else{
                           printk("%s:ASUS input LSensor_CALIDATA was invalid .error !!!!!\n",__func__);
 				    }
-         	}else{	
+         	}else{
 #ifndef CONFIG_ASUS_FACTORY_SENSOR_MODE // in user build and no calibration data			   
-                  report_lux = report_lux*15;
+//                  report_lux = report_lux*15;
                   D("CM36283--- NO calibration data, use default config\n"); 
 #else
                   D("CM36283--- NO calibration data, Factory branch , NO default config\n"); 				  
 #endif // end of CONFIG_ASUS_FACTORY_SENSOR_MODE
-                  report_lux = report_lux/sensitivity_x;
-  		          D("CM36283---After devided by 20, report_lux is %d\n", report_lux);	
+                  report_lux = report_lux*200/(15*sensitivity_x);
+  		          D("CM36283---After devided by 25, report_lux is %d\n", report_lux);	
 		//<-- ASUS-Bevis_Chen - -->
              }			
 

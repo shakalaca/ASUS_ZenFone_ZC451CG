@@ -424,7 +424,7 @@ int release_wakeup_source(void)
 {
 	struct wakeup_source *ws;
 	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
-		if (ws->active) {
+		if (ws->active && strcmp(ws->name,"cable_wakelock")!=0) {
 			pr_info("[jevian log]release active wakeup source: %s\n", ws->name);
 			wake_unlock(ws);
 		}
@@ -445,8 +445,11 @@ void __pm_stay_awake(struct wakeup_source *ws)
 	unsigned long flags;
 
 #ifdef CONFIG_FACTORY_ITEMS
-	if (enablewakelock == 0)
+	if (enablewakelock == 0 && ws && strncmp(ws->name,"cable_wakelock",sizeof("cable_wakelock"))!=0)
+	{
+		pr_info("[jevian log]prevent wakeup lock: %s\n", ws->name);
 		return;
+	}
 #endif
 	if (!ws)
 		return;

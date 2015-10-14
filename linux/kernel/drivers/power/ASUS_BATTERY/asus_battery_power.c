@@ -149,9 +149,10 @@ static void pmic_dump_registers(int dump_mask)
         }
     }
 
-	/*modify MSIC_BATT_CHR_LOWBATTDET_ADDR values [7:6]='11'*/
+	/*modify MSIC_BATT_CHR_LOWBATTDET_ADDR values [7:6]='01'*/
 	intel_scu_ipc_ioread8(MSIC_BATT_CHR_LOWBATTDET_ADDR, &reg_val);
-	reg_val |= (BIT(6)|BIT(7));
+	reg_val &=0x3F;
+	reg_val |= BIT(6);
 	ret = intel_scu_ipc_iowrite8(MSIC_BATT_CHR_LOWBATTDET_ADDR, reg_val);
 	if (ret) {
 		BAT_DBG_E("PMIC register MSIC_BATT_CHR_LOWBATTDET_ADDR Failed to write %d\n", ret);
@@ -634,6 +635,7 @@ static int asus_battery_update_capacity_level(int percentage)
 #ifdef CONFIG_FACTORY_ITEMS
 extern unsigned char fac_charge_disable;
 #endif
+extern unsigned char unknown_battery;
 
 //---------add for zc45cg jeita function--------
 extern int smb347_set_recharge();
@@ -663,6 +665,12 @@ static int asus_battery_update_status_no_mutex(int percentage)
                         goto final;
                 }
 #endif
+                if (unknown_battery == 1) {
+                        BAT_DBG("Because unknown battery,so disabled charge.\n");
+                        smb347_charging_toggle(false);
+                        status = POWER_SUPPLY_STATUS_DISCHARGING;
+                        goto final;
+                }
 
                 if (status == POWER_SUPPLY_STATUS_CHARGING) {
 			if(tmp_batt_info.batt_volt < 4250) 

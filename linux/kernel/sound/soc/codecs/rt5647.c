@@ -111,6 +111,7 @@ struct rt5647_init_reg {
 
 static struct snd_soc_codec *rt5647_codec; //bard 1-27
 struct delayed_work hp_work, spk_work, disable_drc_work, enable_drc_work;//Jericho 0213
+struct delayed_work lout_work;//steve_chen
 static struct workqueue_struct *rt5647_wq;
 static struct timer_list jd_check_timer; //bard 1-27
 struct work_struct jd_check_work; //bard 1-27
@@ -933,12 +934,12 @@ void rt5647_get_stream_usecase(struct snd_soc_codec *codec, bool disableDRC)
 	if(disableDRC == true) {
 		stream_usecase = 0;
 		printk(KERN_INFO "[DRC] set stream_usecase = %d in rt5647_get_stream_usecase\n", stream_usecase);
-		queue_delayed_work(rt5647_wq, &disable_drc_work, msecs_to_jiffies(0));
+		queue_delayed_work(rt5647_wq, &enable_drc_work, msecs_to_jiffies(0));
 	}
 	else {
 		stream_usecase = 1;
 		printk(KERN_INFO "[DRC] set stream_usecase = %d in rt5647_get_stream_usecase\n", stream_usecase);
-		queue_delayed_work(rt5647_wq, &enable_drc_work, msecs_to_jiffies(500));
+		queue_delayed_work(rt5647_wq, &enable_drc_work, msecs_to_jiffies(0));
 	}
 }
 EXPORT_SYMBOL(rt5647_get_stream_usecase);
@@ -1941,7 +1942,7 @@ static void rt5647_pmu_depop(struct snd_soc_codec *codec)
 {
 	hp_amp_power(codec, 1);
 
-	schedule_delayed_work(&hp_work, msecs_to_jiffies(150));
+	schedule_delayed_work(&hp_work, msecs_to_jiffies(50));
 }
 
 static void rt5647_pmd_depop(struct snd_soc_codec *codec)
@@ -2144,35 +2145,45 @@ static int rt5647_lout_event(struct snd_soc_dapm_widget *w,
 	struct snd_soc_codec *codec = w->codec;
 
 	switch (event) {
-	case SND_SOC_DAPM_POST_PMU:
-//printk(KERN_INFO "[test] into hp_amp_power\n");		
+	case SND_SOC_DAPM_POST_PMU:		
 		hp_amp_power(codec, 1);
 		printk(KERN_INFO "[test] into snd_soc_update_bits\n"); 
 
 		snd_soc_update_bits(codec, RT5647_PWR_ANLG1,
 			RT5647_PWR_LM, RT5647_PWR_LM);
-	printk(KERN_INFO "[test] into snd_soc_update_bits mute\n");	
-		snd_soc_update_bits(codec, RT5647_LOUT1,
-			RT5647_L_MUTE | RT5647_R_MUTE, 0);
-//#ifdef CONFIG_FACTORY_ITEMS
-//		printk(KERN_INFO "[test] into RT5647_GPIO_CTRL4\n");
 
-		snd_soc_update_bits(codec,RT5647_GPIO_CTRL4,0x0002,0x0002);
-		
-//		printk(KERN_INFO "[test] out RT5647_GPIO_CTRL4\n");
-//#endif
+		/*enable DRC*/
+		if(stream_usecase == 1){
+			printk("stream type = %d\n",stream_usecase);
+			snd_soc_write(codec, 0xb3, 0x001F);
+			snd_soc_write(codec, 0xb5, 0x1FA0);
+			snd_soc_write(codec, 0xb6, 0x001F);
+			snd_soc_write(codec, 0xb7, 0x5018);
+			snd_soc_write(codec, 0xf0, 0x001F);
+			snd_soc_write(codec, 0xb4, 0x42AC);
+		} else if(stream_usecase == 0){
+			printk("stream type = %d\n",stream_usecase);
+			snd_soc_write(codec, 0xb3, 0x005F);
+			snd_soc_write(codec, 0xb5, 0x1F20);
+			snd_soc_write(codec, 0xb6, 0x601B);
+			snd_soc_write(codec, 0xb7, 0x5005);
+			snd_soc_write(codec, 0xb4, 0x4028);
+		}
+
+		schedule_delayed_work(&lout_work,msecs_to_jiffies(0));
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
-//#ifdef CONFIG_FACTORY_ITEMS
+		cancel_delayed_work_sync(&lout_work);
 		snd_soc_update_bits(codec,RT5647_GPIO_CTRL4,0x0002,0x0000);
-//#endif
+
 		snd_soc_update_bits(codec, RT5647_LOUT1,
 			RT5647_L_MUTE | RT5647_R_MUTE,
 			RT5647_L_MUTE | RT5647_R_MUTE);
 		snd_soc_update_bits(codec, RT5647_PWR_ANLG1,
 			RT5647_PWR_LM, 0);
 		hp_amp_power(codec, 0);
+		snd_soc_write(codec, 0xb4, 0x0006); //Disable DRC
 		break;
 
 	default:
@@ -2551,10 +2562,11 @@ static int rt5647_drc_event(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMD:
 		printk(KERN_INFO "[DRC] rt5647_dmic1_event pmd\n");
 		is_recording = 0;
-		if (stream_usecase == 1)
+/*		if (stream_usecase == 1)
 			queue_delayed_work(rt5647_wq, &enable_drc_work, msecs_to_jiffies(0));
 		else
 			queue_delayed_work(rt5647_wq, &disable_drc_work, msecs_to_jiffies(0));
+*/
 		break;
 	default:
 		return 0;
@@ -3922,6 +3934,16 @@ void do_spk_work(struct work_struct *work)  //Jericho 0213
 	printk(KERN_INFO "[DRC] into do_spk_work spk unmute\n");
 }
 
+void do_lout_work(struct work_struct *work)
+{
+	msleep(5);
+	snd_soc_update_bits(codec_global, RT5647_LOUT1,
+			    RT5647_L_MUTE | RT5647_R_MUTE, 0);
+	msleep(70);
+	snd_soc_update_bits(codec_global,RT5647_GPIO_CTRL4,0x0002,0x0002);
+	printk("%s:[test_DRC_70]",__func__);
+}
+
 void do_disable_drc_work(struct work_struct *work)
 {
 	mutex_lock(&event_drc_mutex);
@@ -3958,56 +3980,20 @@ void do_enable_drc_work(struct work_struct *work)
 		mutex_unlock(&event_drc_mutex);
 		return;
 	}
-	if ((snd_soc_read(codec_global, RT5647_PWR_DIG1) & RT5647_PWR_CLS_D) && (is_recording == 0)){ //open DRC when spk pmu and not recording
-	DRC_CTRL = snd_soc_read(codec_global, RT5647_ALC_CTRL_1) & 0xc000;
-	printk(KERN_INFO "[DRC] DRC_CTRL = %x\n", DRC_CTRL);
-	if(!(DRC_CTRL == 0x4000)) { //check if DRC disable, only when DRC disable needs to be open
-		//Set DRC parameters
-		snd_soc_write(codec_global, 0xb3, 0x041f);
-		snd_soc_write(codec_global, 0xb5, 0xdf80);
-		snd_soc_write(codec_global, 0xb6, 0x05df);
-		snd_soc_write(codec_global, 0xb7, 0x6040);
-		snd_soc_write(codec_global, 0xf0, 0x001f);
-		snd_soc_write(codec_global, 0xe6, 0x8000);
-		snd_soc_write(codec_global, 0xe7, 0x0700);
-		snd_soc_write(codec_global, 0xea, 0x0c20);
-		#ifdef CONFIG_A500CG_AUDIO_SETTING
-			snd_soc_write(codec_global, 0xf1, 0x0006);
-			snd_soc_write(codec_global, 0xf2, 0x5f80);
-			snd_soc_write(codec_global, 0xf3, 0x05df);
-			snd_soc_write(codec_global, 0xf4, 0x6040);
-			rt5647_index_write(codec_global, 0x95, 0x7cc3);
-			rt5647_index_write(codec_global, 0x96, 0x7252);
-			rt5647_index_write(codec_global, 0x97, 0x7519);
-			rt5647_index_write(codec_global, 0x98, 0x7cc3);
-			rt5647_index_write(codec_global, 0x99, 0x7252);
-			rt5647_index_write(codec_global, 0x9a, 0x7519);
-			rt5647_index_write(codec_global, 0x9b, 0x003e);
-			rt5647_index_write(codec_global, 0x9c, 0x0625);
-			rt5647_index_write(codec_global, 0x9d, 0x3f4e);
-		#endif
-		#ifdef CONFIG_A600CG_AUDIO_SETTING
-			snd_soc_write(codec_global, 0xf1, 0x020c);
-			snd_soc_write(codec_global, 0xf2, 0x1f00);
-			snd_soc_write(codec_global, 0xf3, 0x001f);
-			snd_soc_write(codec_global, 0xf4, 0x4000);
-			rt5647_index_write(codec_global, 0x95, 0x7ac5);
-			rt5647_index_write(codec_global, 0x96, 0x1481);
-			rt5647_index_write(codec_global, 0x97, 0xa870);
-			rt5647_index_write(codec_global, 0x98, 0x7ac5);
-			rt5647_index_write(codec_global, 0x99, 0x1481);
-			rt5647_index_write(codec_global, 0x9a, 0xa870);
-			rt5647_index_write(codec_global, 0x9b, 0x003d);
-			rt5647_index_write(codec_global, 0x9c, 0x10c3);
-			rt5647_index_write(codec_global, 0x9d, 0x1b04);
-		#endif
 
-		snd_soc_write(codec_global, 0xb4, 0x4006); //enable DRC
-		printk(KERN_INFO "[DRC] enable spk DRC\n");
-		rt5647_index_write(codec_global, 0x94, 0xcf00); //after parameter ready, enable Cross-Over Filter
-
-		mdelay(0);
-	}
+	if(stream_usecase == 1){
+		snd_soc_write(codec_global, 0xb3, 0x001F);
+		snd_soc_write(codec_global, 0xb5, 0x1FA0);
+		snd_soc_write(codec_global, 0xb6, 0x001F);
+		snd_soc_write(codec_global, 0xb7, 0x5018);
+		snd_soc_write(codec_global, 0xf0, 0x001F);
+		snd_soc_write(codec_global, 0xb4, 0x42AC);
+	}else if(stream_usecase == 0){
+		snd_soc_write(codec_global, 0xb3, 0x005F);
+		snd_soc_write(codec_global, 0xb5, 0x1F20);
+		snd_soc_write(codec_global, 0xb6, 0x601B);
+		snd_soc_write(codec_global, 0xb7, 0x5005);
+		snd_soc_write(codec_global, 0xb4, 0x4028);
 	}
 	mutex_unlock(&event_drc_mutex);
 }
@@ -4136,6 +4122,7 @@ static int rt5647_probe(struct snd_soc_codec *codec)
 	INIT_DELAYED_WORK(&spk_work, do_spk_work);//Jericho 0213
 	INIT_DELAYED_WORK(&disable_drc_work, do_disable_drc_work);
 	INIT_DELAYED_WORK(&enable_drc_work, do_enable_drc_work);
+	INIT_DELAYED_WORK(&lout_work, do_lout_work);
 
 	rt5647_codec = codec; //bard 1-27
 	setup_timer( &jd_check_timer, jd_check_callback, 0 ); //bard 1-27

@@ -918,8 +918,14 @@ static int penwell_otg_set_vbus(struct usb_otg *otg, bool enabled)
 			atomic_notifier_call_chain(&pnw->iotg.otg.notifier,
 				USB_EVENT_DRIVE_VBUS, &enabled);
 #ifdef CONFIG_USB_OTG_SUPPLY_VOLT_CAP
-                        if (usb_otg_support)
-                                setSMB347Charger(enabled ? ENABLE_5V: DISABLE_5V);
+                if (usb_otg_support){
+                       	if(enabled){
+                               if(!gpio_get_value(92)) //SMB358_OTG_CONTROL_PIN patch for TT514019
+                                       setSMB347Charger(ENABLE_5V);
+                        }else{
+                               setSMB347Charger(DISABLE_5V);
+                        }
+                }
 
 #endif
 			kfree(evt);

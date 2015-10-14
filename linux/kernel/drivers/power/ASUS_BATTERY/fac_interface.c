@@ -240,6 +240,18 @@ struct file_operations printklog_fops = {
 	.write=printklog_write,
 };
 
+extern unsigned char unknown_battery;
+ssize_t unknown_battery_read (struct file *filp, char __user *userbuf, size_t size, loff_t *loff_p)
+{
+	unsigned char len;
+	char kernelbuf[5];
+	len = sprintf(kernelbuf,"%d\n",unknown_battery);
+	return simple_read_from_buffer(userbuf, size,loff_p,kernelbuf,len);
+}
+struct file_operations unknown_battery_fops = {
+	.read=unknown_battery_read,
+};
+
 static int __init fac_interface_init(void)
 {
 	printk(KERN_ERR"[jevian log]this is fac img\n");
@@ -282,6 +294,10 @@ static int __init fac_interface_init(void)
 	if(proc_create("zc451cg_printklog", 0777, NULL, &printklog_fops)==NULL)
 	{
 		printk(KERN_ERR"create zc451cg_printklog inode is error\n");
+	}
+	if(proc_create("zc451cg_unknown_battery", 0777, NULL, &unknown_battery_fops)==NULL)
+	{
+		printk(KERN_ERR"create zc451cg_unknown_battery inode is error\n");
 	}
 	return 0;
 }

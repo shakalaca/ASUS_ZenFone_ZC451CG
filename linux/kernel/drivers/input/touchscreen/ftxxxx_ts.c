@@ -104,7 +104,7 @@ struct ftxxxx_ts_data {
 //add by red_zhang@asus.com
 static void ftxxxx_ts_suspend(struct early_suspend *handler);
 static void ftxxxx_ts_resume(struct early_suspend *handler);
-
+static struct mutex i2c_rw_access;
 /*
 *ftxxxx_i2c_Read-read data and write data by i2c
 *@client: handle of i2c
@@ -121,7 +121,7 @@ int ftxxxx_i2c_Read(struct i2c_client *client, char *writebuf,
 	int writelen, char *readbuf, int readlen)
 {
 	int ret;
-
+	mutex_lock(&i2c_rw_access);//zax 20141219
 	if (writelen > 0) {
 		struct i2c_msg msgs[] = {
 			{
@@ -153,13 +153,14 @@ int ftxxxx_i2c_Read(struct i2c_client *client, char *writebuf,
 		if (ret < 0)
 			dev_err(&client->dev, "[second]%s:i2c read error.\n", __func__);
 	}
+	mutex_unlock(&i2c_rw_access);//zax 20141219
 	return ret;
 }
 /*write data by i2c*/
 int ftxxxx_i2c_Write(struct i2c_client *client, char *writebuf, int writelen)
 {
 	int ret;
-
+	mutex_lock(&i2c_rw_access);//zax 20141219
 	struct i2c_msg msg[] = {
 		{
 			.addr = client->addr,
@@ -172,7 +173,7 @@ int ftxxxx_i2c_Write(struct i2c_client *client, char *writebuf, int writelen)
 	ret = i2c_transfer(client->adapter, msg, 1);
 	if (ret < 0)
 		dev_err(&client->dev, "%s i2c write error.\n", __func__);
-
+	mutex_unlock(&i2c_rw_access);//zax 20141219
 	return ret;
 }
 
@@ -351,6 +352,8 @@ static int ftxxxx_read_Touchdata(struct ftxxxx_ts_data *data)
 			8 | (((s16) buf[FT_TOUCH_Y_L_POS + FT_TOUCH_STEP * i]) & 0xFF);
 		event->au8_touch_event[i] =
 			buf[FT_TOUCH_EVENT_POS + FT_TOUCH_STEP * i] >> 6;
+		if((event->au8_touch_event[i]==0 || event->au8_touch_event[i]==2)&&(event->Cur_touchpoint==0))//20141205
+				return 1;//20141205
 		event->au8_finger_id[i] =
 			(buf[FT_TOUCH_ID_POS + FT_TOUCH_STEP * i]) >> 4;
 #if 0
@@ -512,7 +515,7 @@ static irqreturn_t ftxxxx_ts_interrupt(int irq, void *dev_id)
 {
 	struct ftxxxx_ts_data *ftxxxx_ts = dev_id;
 	int ret = 0;
-	disable_irq_nosync(ftxxxx_ts->irq);
+	disable_irq_nosync(ftxxxx_ts->client->irq);
 	
 //	printk("<Red_debug> enter %s",__func__);
 
@@ -520,7 +523,7 @@ static irqreturn_t ftxxxx_ts_interrupt(int irq, void *dev_id)
 	if (ret == 0)
 		ftxxxx_report_value(ftxxxx_ts);
 	
-	enable_irq(ftxxxx_ts->irq);
+	enable_irq(ftxxxx_ts->client->irq);
 
 	return IRQ_HANDLED;
 }
@@ -718,7 +721,7 @@ static int ftxxxx_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	}
 #endif
 #endif
-
+	mutex_init(&i2c_rw_access);
 	err = request_threaded_irq(client->irq, NULL, ftxxxx_ts_interrupt,
 		IRQF_TRIGGER_FALLING | IRQF_ONESHOT, client->dev.driver->name,
 		ftxxxx_ts);

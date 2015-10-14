@@ -177,11 +177,11 @@
 
 //****************** Customer Config End ***********************//
 
-u16 max_limit_value = 4099;     // screen max limit
-u16 min_limit_value = 2028;     // screen min limit
-u16 max_limit_key = 12946;       // key_val max limit
-u16 min_limit_key = 6329;        // key_val min limit
-u16 uniformity_lmt = 49;        // screen uniformity in percent
+u16 max_limit_value = 3929;     // screen max limit
+u16 min_limit_value = 1970;     // screen min limit
+u16 max_limit_key = 11721;       // key_val max limit
+u16 min_limit_key = 5619;        // key_val min limit
+u16 uniformity_lmt = 50;        // screen uniformity in percent
 
 extern s32 gtp_i2c_read(struct i2c_client *, u8 *, s32);
 extern s32 gtp_i2c_write(struct i2c_client *, u8 *, s32);

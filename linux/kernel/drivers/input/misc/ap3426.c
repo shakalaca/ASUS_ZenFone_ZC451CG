@@ -493,14 +493,19 @@ static int lsensor_release(struct inode *inode, struct file *file)
 
 int static calibration_light_ap3426(int x_big, int x_small, int report_lux){        
 
-                    int y_1000 = 1000;
-                    int y_200 = 200;
-                    int constant_k = (y_1000 - y_200)*x_small - (x_big - x_small)*y_200; 
+                    int y_big = 1000;
+                    int y_small = 200;
+                    int constant_k;
 
-					    if ( report_lux*(y_1000 - y_200) < constant_k){
+					    if (x_small == 1) {
+					        x_small = 0;
+					        y_small = 0;
+					    }
+					    constant_k = (y_big - y_small)*x_small - (x_big - x_small)*y_small;
+					    if ( report_lux*(y_big - y_small) < constant_k){
                               return 0; 
                         }else {   
-                             return ((report_lux*(y_1000 - y_200) - constant_k) / (x_big - x_small));			
+                             return ((report_lux*(y_big - y_small) - constant_k) / (x_big - x_small));			
                         }
 }
 
@@ -547,23 +552,20 @@ static long lsensor_ioctl(struct file *file, unsigned int cmd,unsigned long arg)
   	        	&&lSensor_CALIDATA[1] >lSensor_CALIDATA[0] ){ //in case of zero divisor error
                             
             	printk("AP3426---Before calibration, ASUS_LIGHTSENSOR_IOCTL_GETDATA,  report_lux is %d\n", report_lux);
-                report_lux = calibration_light_ap3426(lSensor_CALIDATA[1], lSensor_CALIDATA[0], report_lux);
-                printk("AP3426---After calibration, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);
-
-				report_lux = report_lux / ( 65536/ap3426_get_range(private_pl_data -> client));
-				printk("AP3426---After convertion to lux, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);
+				report_lux = calibration_light_ap3426(lSensor_CALIDATA[1], lSensor_CALIDATA[0], report_lux * 100 / ( 6553600/ap3426_get_range(private_pl_data -> client)));
+				printk("AP3426---After calibration, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);
             }else{
 				rc = -EINVAL;
 				printk("%s:ASUS input lSensor_CALIDATA was invalid .error !!!!!\n",__func__);
 			}
 		}else{
 #ifndef CONFIG_ASUS_FACTORY_SENSOR_MODE // in user build and no calibration data			   
-        	report_lux = report_lux*15;
+        	report_lux = report_lux*7;
 			printk("AP3426--- NO calibration data, use default config\n"); 
 #else
 	        printk("AP3426--- NO calibration data, Factory branch , NO default config\n"); 	
 #endif // end of CONFIG_ASUS_FACTORY_SENSOR_MODE				
-			report_lux = report_lux / ( 65536/ap3426_get_range(private_pl_data -> client));
+			report_lux = report_lux * 100 / ( 6553600/ap3426_get_range(private_pl_data -> client));
 			printk("AP3426---After convertion to lux, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);
 		}
 
@@ -733,22 +735,20 @@ static void ap3426_change_ls_threshold(struct i2c_client *client)
   	        &&lSensor_CALIDATA[1] >lSensor_CALIDATA[0] ){ //in case of zero divisor error
                             
 //            printk("AP3426---Before calibration, ASUS_LIGHTSENSOR_IOCTL_GETDATA,  report_lux is %d\n", value);
-            value = calibration_light_ap3426(lSensor_CALIDATA[1], lSensor_CALIDATA[0], value);
+            value = calibration_light_ap3426(lSensor_CALIDATA[1], lSensor_CALIDATA[0], value * 100 / ( 6553600/ap3426_get_range(private_pl_data -> client)));
 //            printk("AP3426---After calibration, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", value);
 
-			value = value / ( 65536/ap3426_get_range(private_pl_data -> client));
-//			printk("AP3426---After convertion to lux, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);
         }else{
 //			printk("%s:ASUS input lSensor_CALIDATA was invalid .error !!!!!\n",__func__);
 		}
 	}else{
 #ifndef CONFIG_ASUS_FACTORY_SENSOR_MODE // in user build and no calibration data			   
-        value = value*15;
+//        value = value*15;
 //		printk("AP3426--- NO calibration data, use default config\n"); 
 #else
 //	    printk("AP3426--- NO calibration data, Factory branch , NO default config\n"); 	
 #endif // end of CONFIG_ASUS_FACTORY_SENSOR_MODE				
-		value = value / ( 65536/ap3426_get_range(private_pl_data -> client));
+		value = value * 100 / ( 6553600/ap3426_get_range(private_pl_data -> client))*(2000/30)/10;
 //		printk("AP3426---After convertion to lux, ASUS_LIGHTSENSOR_IOCTL_GETDATA, report_lux is %d\n", report_lux);
 
 	}
@@ -1423,8 +1423,8 @@ static int ap3426_init_client(struct i2c_client *client)
     ap3426_set_range(client, AP3426_ALS_RANGE_1);
     ap3426_set_mode(client, AP3426_SYS_DEV_DOWN);
 
-	ap3426_set_plthres(client,0x100);
-	ap3426_set_phthres(client,0x200);
+	ap3426_set_plthres(client,276);
+	ap3426_set_phthres(client,627);
 
 	__ap3426_write_reg(client, AP3426_REG_PS_INTEGR,
 	    0, 0, 0x0f);

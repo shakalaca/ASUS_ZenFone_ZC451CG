@@ -1038,6 +1038,13 @@ struct v4l2_private_int_data {
 // </ChungYi>
 #define ATOMISP_IOC_S_BINNING_SUM \
         _IOWR('v', BASE_VIDIOC_PRIVATE + 68, int)
+//bsp kint++<<
+#define ATOMISP_IOC_G_FLASH_ID \
+        _IOWR('v', BASE_VIDIOC_PRIVATE + 69, int)
+//bsp kint++>>
+
+#define ATOMISP_IOC_S_VIDEO \
+        _IOWR('v', BASE_VIDIOC_PRIVATE + 70, int)
 
 /*  ISP Private control IDs */
 #define V4L2_CID_ATOMISP_BAD_PIXEL_DETECTION \

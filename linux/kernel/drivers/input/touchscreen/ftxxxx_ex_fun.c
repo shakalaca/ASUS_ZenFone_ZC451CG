@@ -35,7 +35,7 @@ int factory_test=1;
 short databuf_short[625];
 
 static unsigned char CTPM_FW[] = {
-#include "ASUS_ZC451CG_5346_0x53_0x42_20141204_app.cfg"
+#include "ASUS_ZC451CG_V92_D2_20141219_app.cfg"
 };
 
 //zax 20141116 ++++++++++++++
@@ -1082,14 +1082,72 @@ static int ftxxxx_get_testparam_from_ini(char *config_name)
 //zax 20141116 ++++++++++++++
 static ssize_t ftxxxx_ftsscaptest_show(struct device *dev,
 struct device_attribute *attr, char *buf)
-{	
+{
 	int count = 0,frame_flag=0;
 	int err = 0;
 	int i = 0, j = 0,space=(11+TX_NUM);
 	int flag[8];
-	struct file *filp = NULL;
-	mm_segment_t oldfs = { 0 };
-	mutex_lock(&g_device_mutex);	
+	//struct file *filp = NULL;
+	//mm_segment_t oldfs = { 0 };
+
+	
+	struct file *pfile = NULL;
+	struct file *pfile1 = NULL;
+	struct inode *inode;
+	unsigned long magic;
+	off_t fsize = 0;
+	loff_t pos;
+	mm_segment_t old_fs;
+	//char filepath[128];
+	char *databuf = NULL;
+	char *databuf1 = NULL;
+	ssize_t err1;
+	
+	mutex_lock(&g_device_mutex);
+	
+
+	
+	//memset(filepath, 0, sizeof(filepath));
+	//sprintf(filepath, "/data/fts_scap_sample");
+	//DBG("save auto test data to %s\n", filepath);
+
+	databuf = kmalloc(10 * 1024, GFP_ATOMIC);
+	if (databuf == NULL) {
+		printk("[Focal]alloc data buf fail !\n");
+		return -1;
+	}
+
+	memset(databuf, 0, sizeof(databuf));
+
+	databuf1 = kmalloc(10 * 1024, GFP_ATOMIC);
+	if (databuf1 == NULL) {
+		printk("[Focal]alloc data buf fail !\n");
+		return -1;
+	}
+
+	memset(databuf1, 0, sizeof(databuf1));
+	//sprintf(databuf, "Project Code: %s\n", g_projectcode);
+
+	
+	if (NULL == pfile)
+		pfile = filp_open("/mnt/sdcard/11.csv", O_WRONLY|O_CREAT|O_TRUNC, 0777);
+
+	if (IS_ERR(pfile)) {
+		pr_err("error occured while opening file %s.\n", "");
+		return -EIO;
+	}
+
+	old_fs = get_fs();
+	set_fs(get_ds());
+	inode = pfile->f_dentry->d_inode;
+	magic = inode->i_sb->s_magic;
+	fsize = inode->i_size;
+	pos = 0;
+
+	
+	
+	
+			
 	flag[0]=SCab_1;		
 	flag[1]=SCab_2;	
 	flag[2]=SCab_3;	
@@ -1098,29 +1156,29 @@ struct device_attribute *attr, char *buf)
 	flag[5]=SCab_6;	
 	flag[6]=SCab_7;	
 	flag[7]=SCab_8;
-	printk("[Focal][%s]	raw data \n", __func__);
+	//printk("[Focal][%s]	raw data \n", __func__);
 
-	filp = filp_open("/mnt/sdcard/11.csv", O_RDWR | O_CREAT, S_IRUSR);
-	if (IS_ERR(filp)) 
-	{
-		printk("[Focal][TOUCH_ERR] %s: open /data/1.csv failed\n", __func__);
-		return 0;
-	}
-	oldfs = get_fs();
-	set_fs(get_ds());
+	//filp = filp_open("/mnt/sdcard/11.csv", O_RDWR | O_CREAT, S_IRUSR);
+	//if (IS_ERR(filp)) 
+	//{
+	//	printk("[Focal][TOUCH_ERR] %s: open /data/1.csv failed\n", __func__);
+	//	return 0;
+	//}
+	//oldfs = get_fs();
+	//set_fs(get_ds());
 
 				
 	//count += sprintf(buf + count,"TestItem Num, 3, RawData Test, 7, %d, %d, 11, 1, SCap CB Test, 9, %d, %d, %d, 1, SCap CB Test, 9, %d, %d, %d, 2, SCap RawData Test, 10, %d, %d, %d, 1, SCap RawData Test, 10, %d, %d, %d, 2\n",TX_NUM,RX_NUM,(SCab_1+SCab_2),RX_NUM,(11+TX_NUM),(SCab_3+SCab_4),RX_NUM,(11+TX_NUM+SCab_1+SCab_2),(SCab_5+SCab_6),RX_NUM,(11+TX_NUM+SCab_1+SCab_2+SCab_3+SCab_4),(SCab_7+SCab_8),RX_NUM,(11+TX_NUM+SCab_1+SCab_2+SCab_3+SCab_4+SCab_5+SCab_6));
 	
-	count += sprintf(buf + count,"ECC, 85, 170, IC Name, FT5X46, IC Code, 21\n");
-	count += sprintf(buf + count,"TestItem Num, 3, RawData Test, 7, %d, %d, 11, 2, ",TX_NUM,RX_NUM);
+	count += sprintf(databuf + count,"ECC, 85, 170, IC Name, FT5X46, IC Code, 21\n");
+	count += sprintf(databuf + count,"TestItem Num, 3, RawData Test, 7, %d, %d, 11, 2, ",TX_NUM,RX_NUM);
 	frame_flag=0;
 	for(i=0;i<2;i++)
 	{
 		if((flag[2*i]+flag[2*i+1])>0)
 		{
 			frame_flag++;
-			count += sprintf(buf + count,"SCap CB Test, 9, %d, %d, %d, %d, ",(flag[2*i]+flag[2*i+1]),RX_NUM,space,frame_flag);
+			count += sprintf(databuf + count,"SCap CB Test, 9, %d, %d, %d, %d, ",(flag[2*i]+flag[2*i+1]),RX_NUM,space,frame_flag);
 			space+=flag[2*i]+flag[2*i+1];
 		}
 	}
@@ -1130,17 +1188,19 @@ struct device_attribute *attr, char *buf)
 		if((flag[2*i]+flag[2*i+1])>0)
 		{
 			frame_flag++;
-			count += sprintf(buf + count,"SCap RawData Test, 10, %d, %d, %d, %d, ",(flag[2*i]+flag[2*i+1]),RX_NUM,space,frame_flag);
+			count += sprintf(databuf + count,"SCap RawData Test, 10, %d, %d, %d, %d, ",(flag[2*i]+flag[2*i+1]),RX_NUM,space,frame_flag);
 			space+=flag[2*i]+flag[2*i+1];
 		}
 	}
 
-	count += sprintf(buf + count,"\n");
+
+
+	count += sprintf(databuf + count,"\n");
 	for(i=0;i<8;i++)
-		count += sprintf(buf + count,"\n");
-	printk("[Focal][%s]	123 data result = %d !\n", __func__, err);
+		count += sprintf(databuf + count,"\n");
+	//printk("[Focal][%s]	123 data result = %d !\n", __func__, err);
 	focal_save_scap_sample1();
-	
+	//printk("[Focal][%s]	789 result = !\n");
 	for (i = 0; i < TX_NUM+8; i++) {
 		if(i>=TX_NUM && flag[i-TX_NUM]==0)
 		{			
@@ -1152,52 +1212,35 @@ struct device_attribute *attr, char *buf)
 			{			
 				break;
 			}
-			count += sprintf(buf + count,"%5d, ",  Save_rawData1[i][j]);
+			
+				
+			count += sprintf(databuf + count,"%5d, ",  Save_rawData1[i][j]);
 			//msleep(2000);
 		}
 		//msleep(10000);
-		count += sprintf(buf + count,"\n");
+		count += sprintf(databuf + count,"\n");
 	}
 	/*Print RawData End*/		
-	filp->f_op->write(filp, buf, count, &filp->f_pos);
-	set_fs(oldfs);
-	filp_close(filp, NULL);
-	msleep(1000);
 
-	filp = filp_open("/mnt/sdcard/11.txt", O_RDWR | O_CREAT, S_IRUSR);
-	if (IS_ERR(filp)) 
-	{
-		printk("[Focal][TOUCH_ERR] %s: open /data/1.txt failed\n", __func__);
-		return 0;
-	}
-	oldfs = get_fs();
-	set_fs(get_ds());
+//printk("[Focal][%s]	456data result = !\n");
+	err1 = vfs_write(pfile, databuf, count, &pos);
+	if (err1 < 0)
+		printk("[Focal]write scap sample fail!\n");
+	filp_close(pfile, NULL);
+	set_fs(old_fs);
+//printk("[Focal][%s]	1111111111111 result = !\n");
+	kfree(databuf);
 
-	count=0;			
-	for (i = 0; i < TX_NUM+8; i++) {
-		if(i>=TX_NUM && flag[i-TX_NUM]==0)
-		{			
-			continue;
-		}
-		for (j = 0; j < RX_NUM; j++) 
-		{
-			if(i>=TX_NUM && j==TX_NUM && ((i-TX_NUM)%2)==1)
-			{			
-				break;
-			}
-
-			count += sprintf(buf + count,"%d,",  Save_rawData1[i][j]);
-			//msleep(2000);
-		}
-		//msleep(10000);
-		count += sprintf(buf + count,"\n");
-	}
-
-	filp->f_op->write(filp, buf, count, &filp->f_pos);
-	set_fs(oldfs);
-	filp_close(filp, NULL);
+	//filp->f_op->write(filp, buf, count, &filp->f_pos);
+	//set_fs(oldfs);
+	//filp_close(filp, NULL);
+	
+	
+	kfree(databuf1);
 	mutex_unlock(&g_device_mutex);
+	//printk("[Focal][%s]	878787 result = !\n");
 	return scnprintf (buf, PAGE_SIZE,"%d\n",factory_test);
+	
 }
 //zax 20141116 --------------------
 static ssize_t ftxxxx_ftsscaptest_store(struct device *dev,
@@ -1252,6 +1295,7 @@ struct device_attribute *attr,
 
 	return count;
 }
+
 
 /****************************************/
 /* sysfs */

@@ -30,6 +30,7 @@
 #include "ug31xx_ggb_data_A502_1.h"
 #include "ug31xx_ggb_data_A502_2.h"
 #include "ug31xx_ggb_data_ZC451.h"
+#include "ug31xx_ggb_data_ZC451_2ND.h"
 
 #include "uG31xx_Platform.h"
 #include "ug31xx_gauge.h"
@@ -336,6 +337,7 @@ static int force_fc_timeout = 30*60*1000;
 
 #define CHARGER_LIST_NUM      (1)
 //static char *charger_list[] = {"ac"};
+unsigned char unknown_battery = 0;
 
 static void get_ggb_array(void)
 {
@@ -399,10 +401,27 @@ static void get_ggb_array(void)
 		}
 	}*/
 	/* Free the allocated ADC channels */
+	force_fc_current_thrd = 150;
 	if (bat_adc_handle)
 		intel_mid_gpadc_free(bat_adc_handle);
 
-	FactoryGGBXFile = FactoryGGBXFile_ZC451;
+	if(900*1023/1500 <= vol_temp && vol_temp <= 1100*1023/1500)
+	{
+		GAUGE_info("this is old battery\n");
+		FactoryGGBXFile = FactoryGGBXFile_ZC451;
+	}
+	else if(1150*1023/1500 <= vol_temp && vol_temp <= 1300*1023/1500)
+	{
+		GAUGE_info("this is new battery\n");
+		unknown_battery = 1;//can't changer for new battery
+		FactoryGGBXFile = FactoryGGBXFile_ZC451_2ND;
+	}
+	else
+	{
+		GAUGE_info("unknown battery ID\n");
+		unknown_battery = 1;
+		FactoryGGBXFile = FactoryGGBXFile_ZC451;
+	}
 	GAUGE_info("%s: use 451 ggb data\n", __func__);
 }
 

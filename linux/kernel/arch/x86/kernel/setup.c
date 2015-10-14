@@ -957,6 +957,21 @@ void __init setup_arch(char **cmdline_p)
 #endif
 #endif
 
+#ifdef CONFIG_FACTORY_ITEMS
+	char *str;
+	str = strstr(boot_command_line,"androidboot.mode=charger");
+	if(str != NULL)
+	{
+		unsigned int len;
+		len=strlen("androidboot.mode=main");
+		strcpy(str,"androidboot.mode=main");
+		do
+		{
+			str[len]=str[len+3];
+		}
+		while(str[len++] != '\0');
+	}
+#endif
 	strlcpy(command_line, boot_command_line, COMMAND_LINE_SIZE);
 	*cmdline_p = command_line;
 

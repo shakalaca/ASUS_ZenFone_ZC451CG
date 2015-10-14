@@ -776,6 +776,7 @@ static void goodix_ts_work_func(struct work_struct *work)
     }
 #endif
 
+/*
 //add for palm mode
 //add by red_zhang@asus.com
 	if((finger & 0x40) == 0x40)
@@ -806,7 +807,7 @@ static void goodix_ts_work_func(struct work_struct *work)
 			goto exit_work_func;
 		}
 	}
-	
+
     if (finger == 0x00)
     {
         if (ts->use_irq)
@@ -855,7 +856,62 @@ if((finger & 0x80) == 0)
         {
                 goto exit_work_func;
         }
-
+	*/
+	if (finger == 0x00)
+    {
+        if (ts->use_irq)
+        {
+            gtp_irq_enable(ts);
+        }
+        return;
+    }
+    if((finger & 0x80) == 0)
+    {
+        goto exit_work_func;
+    }
+	if ((finger & 0x40) == 0x40) 
+	{				
+		touch_num = 0;
+		large_touch_mask = 1;			//large bit enable always				
+		if(pre_touch)
+		{
+				for (i = 0; i < GTP_MAX_TOUCH; i++)
+				{		
+						gtp_touch_up(ts, i);
+				}
+				input_sync(ts->input_dev); 
+				pre_touch = 0;
+		}				 
+		goto exit_work_func;	  
+ 	} 
+		
+	if(1 == large_touch_mask)
+	{
+		u8 tmp_buf[3] = {0xCE, 0x85};	
+		ret = gtp_i2c_read(i2c_connect_client, tmp_buf, 3);  //if touch remain,don't exit large touch mode
+		GTP_DEBUG("0xCE85 = 0x%02X", tmp_buf[2]);
+		if (ret > 0)
+		{
+			if (0 == tmp_buf[2])
+			{
+				large_touch_mask=0;
+			}
+			else
+			{
+				touch_num = 0;	  
+				if(pre_touch)
+				{
+					for (i = 0; i < GTP_MAX_TOUCH; i++)
+					{		
+							gtp_touch_up(ts, i);
+					}
+					input_sync(ts->input_dev); 
+					pre_touch = 0;
+				}				 
+				goto exit_work_func;	  
+			}
+		}
+	}
     touch_num = finger & 0x0f;
     if (touch_num > GTP_MAX_TOUCH)
     {

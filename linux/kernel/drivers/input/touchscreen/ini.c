@@ -46,8 +46,8 @@ int ini_get_key(char *filedata, char * section, char * key, char * value)
 	buf2 = kmalloc(MAX_CFG_BUF + 1, GFP_KERNEL);
 
 	*value='\0';
-	if (strcmp(section, Section_SpecialSet) == 0)
-		printk("[Focal][%s] search section !");
+	//if (strcmp(section, Section_SpecialSet) == 0)
+	//	printk("[Focal][%s] search section !");
 	while(1) { /* À—’“œÓsection */
 
 		ret = CFG_ERR_READ_FILE;
@@ -73,14 +73,14 @@ int ini_get_key(char *filedata, char * section, char * key, char * value)
 			buf1[n-1] = 0x00;
 			if(strcmp(buf1+1, section) == 0)
 			{
-				if (strcmp(section, Section_SpecialSet) == 0)
-					printk("[Focal][%s] find section section = %s ! \n", __func__, section);
+				//if (strcmp(section, Section_SpecialSet) == 0)
+				//	printk("[Focal][%s] find section section = %s ! \n", __func__, section);
 				break; /* ’“µΩœÓsection */
 			}
 		} 
 	} 
-	if (strcmp(section, Section_SpecialSet) == 0)
-		printk("[Focal][%s] search key ! \n", __func__);	
+	//if (strcmp(section, Section_SpecialSet) == 0)
+	//	printk("[Focal][%s] search key ! \n", __func__);	
 	while(1){ /* À—’“key */ 
 
 		ret = CFG_ERR_READ_FILE;
@@ -137,8 +137,8 @@ int ini_get_key(char *filedata, char * section, char * key, char * value)
 	} 
 	ret = CFG_OK; 
 r_cfg_end:
-	if (strcmp(section, Section_SpecialSet) == 0)
-		printk("[Focal][%s] at end ret = %d key name = %s key_ptr = %s  ! \n", __func__, ret, key, key_ptr);
+	//if (strcmp(section, Section_SpecialSet) == 0)
+	//	printk("[Focal][%s] at end ret = %d key name = %s key_ptr = %s  ! \n", __func__, ret, key, key_ptr);
 	kfree(buf1);
 	kfree(buf2);
 
