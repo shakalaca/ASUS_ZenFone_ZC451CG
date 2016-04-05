@@ -3934,8 +3934,8 @@ void do_lout_work(struct work_struct *work)
 	snd_soc_update_bits(codec_global, RT5647_LOUT1,
 			    RT5647_L_MUTE | RT5647_R_MUTE, 0);
 	if(stream_usecase == 1) {
-	    printk("%s:ringtone delay 95ms\n",__func__);
-	    msleep(95);
+	    printk("%s:ringtone delay 140ms\n",__func__);
+	    msleep(140);
 	} else {
 	    printk("%s:not ringtone delay 20ms\n",__func__);
 	    msleep(20);
