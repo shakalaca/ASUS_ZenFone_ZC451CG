@@ -114,8 +114,8 @@
 /*----------------------------------------------------------------------------*/
 /* ap3426 PS CONFIG registers */
 #define AP3426_REG_PS_CONF         0x20 /*PS GAIN*/
-#define AP3426_REG_PS_CONF_SHIFT         (2) 
-#define AP3426_REG_PS_CONF_MASK         0x0C 
+#define AP3426_REG_PS_CONF_SHIFT         (0) 
+#define AP3426_REG_PS_CONF_MASK         0x04 
 
 #define AP3426_REG_PS_LEDD         0x21 /*PS LED DRIVER*/
 #define AP3426_REG_PS_LEDD_SHIFT         (0) 
@@ -159,6 +159,8 @@
 //SYSTEM MODE (AP3426_REG_SYS_CONF)
 #define	AP3426_SYS_DEV_DOWN        0x00
 #define	AP3426_SYS_ALS_ENABLE      0x01
+#define     AP3426_REG_SYS_INT_PS_MASK  0x02
+#define     AP3426_REG_SYS_INT_AL_MASK  0x01
 #define	AP3426_SYS_PS_ENABLE       0x02
 #define	AP3426_SYS_ALS_PS_ENABLE   0x03
 #define	AP3426_SYS_DEV_RESET       0x04
