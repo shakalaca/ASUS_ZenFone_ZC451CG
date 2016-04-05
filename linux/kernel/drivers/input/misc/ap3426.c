@@ -1123,12 +1123,13 @@ static ssize_t ap3426_store_mode(struct device *dev,
     if (ret < 0)
 	return ret;
 
-    if ((pl_enabled == 2) && (val & AP3426_SYS_PS_ENABLE)) {
-		data->once_ps_opened = 1;
-    }
-	else {
-		data->once_ps_opened = 0;
-	}
+      if (pl_enabled == 2){
+		 if ((val & AP3426_SYS_PS_ENABLE)) {
+			data->once_ps_opened = 1;
+		}else {
+			data->once_ps_opened = 0;
+		}
+   }
     if (((lastmode & AP3426_SYS_ALS_ENABLE) == 0)
 		&& ((val & AP3426_SYS_ALS_ENABLE) == 1)){
 		data->once_ls_opened = 1;

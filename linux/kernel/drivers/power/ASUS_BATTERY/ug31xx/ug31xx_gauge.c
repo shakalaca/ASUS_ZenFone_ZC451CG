@@ -2299,6 +2299,24 @@ EXPORT_SYMBOL(ug31xx_set_charge_termination_current);
 
 #ifdef UG31XX_PROC_DEV
 struct proc_dir_entry *battery; 
+int ug31xx_get_proc_soh(struct file *filp, char __user *buffer, size_t count, loff_t *ppos)
+{
+  int len = 0;
+  ssize_t ret = 0;
+  char *buff;
+
+  buff = kmalloc(100,GFP_KERNEL);
+  if(!buff)
+	return -ENOMEM;
+  len += sprintf(buff+len, "FCC=%d(mah),DC=2100(mah),RM=%d(mah),TEMP=%d(C),VOLT=%d(mV),CUR=%d(mA),CC=%d\n",
+  	ug31_module.get_full_charge_capacity(),ug31_module.get_remaining_capacity(),
+  	(ug31_module.get_avg_external_temperature()/10),ug31_module.get_voltage(),
+  	ug31_module.get_current_now(),ug31_module.get_cycle_count());  
+  ret = simple_read_from_buffer(buffer,count,ppos,buff,len);
+  kfree(buff);
+  return ret;
+}
+
 int ug31xx_get_proc_rsoc(struct file *filp, char __user *buffer, size_t count, loff_t *ppos)
 {
   int len = 0;
@@ -3101,6 +3119,9 @@ static void batt_probe_work_func(struct work_struct *work)
 #endif	///< end of UG31XX_MISC_DEV
 
 #ifdef UG31XX_PROC_DEV
+	static struct file_operations Aug31xx_get_proc_soh = {
+	    .read = ug31xx_get_proc_soh,
+	};
 	static struct file_operations Aug31xx_get_proc_rsoc = {
 	    .read = ug31xx_get_proc_rsoc,
 	};
@@ -3129,6 +3150,12 @@ static void batt_probe_work_func(struct work_struct *work)
 	    .read = ug31xx_get_proc_kbo_stop,
 	};
 
+
+	ent = proc_create("driver/battery_soh", 0744,NULL, &Aug31xx_get_proc_soh); 
+	if(!ent)
+	{
+		GAUGE_err("create /proc/driver/battery_soh fail\n");
+	}
 	ent = proc_create("BMSSOC", 0744,NULL, &Aug31xx_get_proc_rsoc); 
 	if(!ent)
 	{
